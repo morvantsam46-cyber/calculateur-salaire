@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Du brut à la poche — Calculateur salaire & impôt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E7EBEC;
+    --card:#FCFDFD;
+    --ink:#16262B;
+    --ink-2:#5A6B70;
+    --line:#D6DDDE;
+    --brut:#0E6E66;
+    --brut-2:#12857B;
+    --deep:#0C2E2B;
+    --deduct:#A6473F;
+    --deduct-bg:#F4E7E4;
+    --r:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans", system-ui, -apple-system, Segoe UI, sans-serif;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    padding:20px 16px 30px;
+  }
+  .wrap{max-width:600px; margin:0 auto;}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric:tabular-nums;}
+
+  header{display:flex; justify-content:space-between; align-items:flex-start; gap:18px 20px; margin-bottom:24px; flex-wrap:wrap;}
+  h1{font-family:"IBM Plex Serif", Georgia, serif; font-weight:600; font-size:1.55rem; line-height:1.1; letter-spacing:-0.01em; margin:0 0 5px;}
+  .sub{color:var(--ink-2); font-size:0.8rem; margin:0; max-width:34ch;}
+  .toggle{display:inline-flex; background:#DBE1E2; border-radius:11px; padding:3px; flex:none;}
+  .toggle button{border:0; background:transparent; font:inherit; font-size:0.8rem; font-weight:500; color:var(--ink-2); padding:8px 15px; border-radius:8px; cursor:pointer; transition:background .15s, color .15s, box-shadow .15s;}
+  .toggle button.active{background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.09);}
+  .toggle button:focus-visible{outline:2px solid var(--brut-2); outline-offset:1px;}
+
+  .cascade{position:relative;}
+  .tier{
+    position:relative; background:var(--card);
+    border:1px solid var(--line); border-left:4px solid var(--brut);
+    border-radius:var(--r); padding:14px 18px 15px;
+    transition:box-shadow .18s ease, border-color .18s ease;
+  }
+  .tier .lbl{display:flex; align-items:center; gap:8px; font-size:0.7rem; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:var(--ink-2); margin-bottom:5px;}
+  .tag{font-family:"IBM Plex Sans",sans-serif; text-transform:none; letter-spacing:0; font-weight:500; font-size:0.66rem; color:var(--brut); background:rgba(14,110,102,.10); padding:2px 7px; border-radius:20px;}
+  .amount-row{display:flex; align-items:baseline; gap:10px;}
+  .amount-row input{
+    flex:1; min-width:0; width:100%;
+    border:0; background:transparent; outline:none;
+    font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace; font-variant-numeric:tabular-nums;
+    font-size:1.95rem; font-weight:500; color:var(--ink);
+    padding:2px 0; letter-spacing:-0.01em;
+    border-bottom:2px solid transparent; transition:border-color .15s;
+  }
+  .amount-row input:focus{border-bottom-color:var(--brut-2);}
+  .unit{color:var(--ink-2); font-size:0.9rem; white-space:nowrap;}
+  .unit .per{font-size:0.76rem; display:block; text-align:right; line-height:1; margin-top:1px;}
+  .tier.focused{border-color:var(--brut-2); box-shadow:0 0 0 3px rgba(18,133,123,.15);}
+
+  .tier-final{background:var(--deep); border-color:var(--deep); border-left-color:var(--brut-2);}
+  .tier-final .lbl{color:#9BC5BE;}
+  .tier-final .amount-row input{color:#F1F8F6; font-size:2.2rem; font-weight:600;}
+  .tier-final .amount-row input:focus{border-bottom-color:#5CC7BA;}
+  .tier-final .unit{color:#8DB7B0;}
+  .tier-final.focused{box-shadow:0 0 0 3px rgba(92,199,186,.24);}
+
+  .connector{position:relative; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 4px 9px 28px;}
+  .connector::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--brut); opacity:.32; border-radius:2px;}
+  .connector::after{content:"▾"; position:absolute; left:-4px; bottom:2px; font-size:0.7rem; color:var(--brut); opacity:.5;}
+  .conn-label{font-size:0.8rem; color:var(--ink-2);}
+  .conn-label em{font-style:normal; color:var(--ink-2); opacity:.8;}
+  .conn-amount{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600; font-size:0.9rem; color:var(--deduct); white-space:nowrap;}
+
+  .summary{display:flex; gap:10px; margin:20px 0 6px; flex-wrap:wrap;}
+  .stat{flex:1; min-width:130px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px;}
+  .stat .k{display:block; font-size:0.68rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--ink-2); margin-bottom:5px;}
+  .stat .v{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-size:1.15rem; font-weight:600; color:var(--ink);}
+
+  .params{margin-top:20px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:6px 18px;}
+  .param{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 0; border-top:1px solid var(--line); flex-wrap:wrap;}
+  .param:first-child{border-top:0;}
+  .param-label{font-size:0.83rem; font-weight:500;}
+  .param-label small{display:block; font-weight:400; color:var(--ink-2); font-size:0.72rem;}
+
+  .rate-control{display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
+  .rate-field{display:inline-flex; align-items:baseline; background:#EDF1F1; border:1px solid var(--line); border-radius:9px; padding:5px 9px;}
+  .rate-field input{width:2.6em; border:0; background:transparent; outline:none; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-size:0.95rem; font-weight:600; color:var(--ink); text-align:right;}
+  .rate-field input:focus{color:var(--brut-2);}
+  .rate-field .pct{color:var(--ink-2); font-size:0.85rem; margin-left:2px;}
+  .chips{display:inline-flex; gap:6px;}
+  .chips button, .seg button{border:1px solid var(--line); background:#EDF1F1; color:var(--ink-2); font:inherit; font-size:0.76rem; font-weight:500; padding:6px 11px; border-radius:20px; cursor:pointer; transition:all .14s;}
+  .chips button:hover, .seg button:hover{border-color:#B9C4C5;}
+  .chips button.active, .seg button.active{background:var(--brut); border-color:var(--brut); color:#fff;}
+  .chips button:focus-visible, .seg button:focus-visible{outline:2px solid var(--brut-2); outline-offset:1px;}
+  .seg{display:inline-flex; gap:6px;}
+
+  .stepper{display:inline-flex; align-items:center; gap:2px; background:#EDF1F1; border:1px solid var(--line); border-radius:9px; padding:3px;}
+  .stepper button{width:30px; height:30px; border:0; background:transparent; color:var(--ink); font-size:1.15rem; line-height:1; cursor:pointer; border-radius:7px; transition:background .14s;}
+  .stepper button:hover{background:#DFE5E5;}
+  .stepper button:focus-visible{outline:2px solid var(--brut-2); outline-offset:1px;}
+  .stepper .val{min-width:34px; text-align:center; font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:0.95rem;}
+
+  .notes{margin-top:18px; border:1px solid var(--line); border-radius:12px; background:var(--card); overflow:hidden;}
+  .notes summary{cursor:pointer; padding:13px 18px; font-size:0.82rem; font-weight:500; color:var(--ink); list-style:none; display:flex; align-items:center; justify-content:space-between;}
+  .notes summary::-webkit-details-marker{display:none;}
+  .notes summary::after{content:"+"; color:var(--ink-2); font-size:1.1rem;}
+  .notes[open] summary::after{content:"–";}
+  .notes .body{padding:0 18px 16px; font-size:0.79rem; color:var(--ink-2); line-height:1.55;}
+  .notes .body p{margin:0 0 9px;}
+  .notes .body strong{color:var(--ink);}
+  .notes .body code{font-family:"IBM Plex Mono",monospace; font-size:0.9em; background:#EDF1F1; padding:1px 5px; border-radius:4px; color:var(--ink);}
+
+  @media (max-width:420px){
+    .amount-row input{font-size:1.65rem;}
+    .tier-final .amount-row input{font-size:1.85rem;}
+    h1{font-size:1.35rem;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Du brut à la poche</h1>
+      <p class="sub">Calculateur de salaire net et d'impôt sur le revenu — barème 2026.</p>
+    </div>
+    <div class="toggle" role="group" aria-label="Périodicité">
+      <button data-periode="mois" class="active" aria-pressed="true">Mensuel</button>
+      <button data-periode="annee" aria-pressed="false">Annuel</button>
+    </div>
+  </header>
+
+  <div class="cascade">
+
+    <div class="tier tier-brut" id="tier-brut">
+      <div class="lbl"><label for="in-brut">Salaire brut</label></div>
+      <div class="amount-row">
+        <input id="in-brut" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Salaire brut">
+        <span class="unit">€ <span class="per">/ mois</span></span>
+      </div>
+    </div>
+
+    <div class="connector">
+      <span class="conn-label">Cotisations salariales <em id="cot-rate">(22 %)</em></span>
+      <span class="conn-amount">− <span id="cot-amount">0,00 €</span></span>
+    </div>
+
+    <div class="tier tier-net" id="tier-net">
+      <div class="lbl"><label for="in-net">Salaire net</label> <span class="tag">avant impôt</span></div>
+      <div class="amount-row">
+        <input id="in-net" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Salaire net avant impôt">
+        <span class="unit">€ <span class="per">/ mois</span></span>
+      </div>
+    </div>
+
+    <div class="connector">
+      <span class="conn-label">Impôt sur le revenu <em>· prélèvement à la source</em></span>
+      <span class="conn-amount">− <span id="imp-amount">0,00 €</span></span>
+    </div>
+
+    <div class="tier tier-final" id="tier-apres">
+      <div class="lbl"><label for="in-apres">Salaire net après imposition</label></div>
+      <div class="amount-row">
+        <input id="in-apres" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Salaire net après imposition">
+        <span class="unit">€ <span class="per">/ mois</span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="summary">
+    <div class="stat"><span class="k">Impôt annuel</span><span class="v mono" id="s-impot">0 €</span></div>
+    <div class="stat"><span class="k">Taux moyen d'imp.</span><span class="v mono" id="s-taux">0 %</span></div>
+    <div class="stat"><span class="k">Tranche (TMI)</span><span class="v mono" id="s-tmi">0 %</span></div>
+  </div>
+
+  <div class="params">
+    <div class="param">
+      <span class="param-label">Cotisations salariales<small>brut → net</small></span>
+      <div class="rate-control">
+        <span class="rate-field"><input id="taux" type="text" inputmode="decimal" value="22" aria-label="Taux de cotisations en pourcentage"><span class="pct">%</span></span>
+        <span class="chips">
+          <button data-taux="22" class="active">Non-cadre</button>
+          <button data-taux="25">Cadre</button>
+        </span>
+      </div>
+    </div>
+    <div class="param">
+      <span class="param-label">Situation<small>seuil de décote</small></span>
+      <div class="seg" id="seg-situation">
+        <button data-sit="celibataire" class="active">Célibataire</button>
+        <button data-sit="couple">Couple</button>
+      </div>
+    </div>
+    <div class="param">
+      <span class="param-label">Parts fiscales<small>quotient familial</small></span>
+      <div class="stepper">
+        <button id="parts-minus" aria-label="Retirer une demi-part">−</button>
+        <span class="val mono" id="parts-val">1</span>
+        <button id="parts-plus" aria-label="Ajouter une demi-part">+</button>
+      </div>
+    </div>
+  </div>
+
+  <details class="notes">
+    <summary>Hypothèses de calcul</summary>
+    <div class="body">
+      <p><strong>Brut → net.</strong> Le net avant impôt est estimé par un taux forfaitaire de cotisations salariales (réglable). En réalité ce taux varie légèrement selon les tranches (plafond de la Sécurité sociale, statut cadre) : c'est une approximation. Repères usuels : ~22 % non-cadre, ~25 % cadre. Un audioprothésiste est généralement au statut <strong>cadre</strong>.</p>
+      <p><strong>Net → impôt.</strong> L'impôt suit le barème progressif <strong>2026</strong> (barème officiel revenus 2025) : 0 % jusqu'à 11 600 €, 11 % jusqu'à 29 579 €, 30 % jusqu'à 84 577 €, 41 % jusqu'à 181 917 €, puis 45 %. Le calcul applique l'abattement de 10 % pour frais professionnels, divise par le nombre de parts, puis applique le barème et la décote.</p>
+      <p><strong>À savoir.</strong> C'est du côté d'une simulation simple — chiffres indicatifs, à confronter au simulateur officiel impots.gouv.fr pour votre situation exacte.</p>
+    </div>
+  </details>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var BRACKETS = [
+    { limit: 11600,    rate: 0.00 },
+    { limit: 29579,    rate: 0.11 },
+    { limit: 84577,    rate: 0.30 },
+    { limit: 181917,   rate: 0.41 },
+    { limit: Infinity, rate: 0.45 }
+  ];
+  var ABATT_RATE = 0.10, ABATT_MIN = 495, ABATT_MAX = 14171;
+  var CSG_NON_DED = 0.0285;
+  var DECOTE = {
+    celibataire: { seuil: 1982, forfait: 897,  taux: 0.4525 },
+    couple:      { seuil: 3277, forfait: 1483, taux: 0.4525 }
+  };
+
+  var state = {
+    brutAnnuel: 36000,
+    periode: 'mois',
+    taux: 0.22,
+    parts: 1,
+    situation: 'celibataire'
+  };
+  var active = null;
+
+  function $(id){ return document.getElementById(id); }
+  function parseNum(s){
+    if (s == null) return 0;
+    s = String(s).replace(/[\s\u00A0\u202F]/g,'').replace(',', '.').replace(/[^0-9.]/g,'');
+    var v = parseFloat(s);
+    return (isNaN(v) || v < 0) ? 0 : v;
+  }
+  function round2(n){ return Math.round(n*100)/100; }
+  function fmt(n){ return round2(n).toLocaleString('fr-FR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function fmtEuro(n){ return round2(n).toLocaleString('fr-FR',{minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
+  function fmtEuro0(n){ return Math.round(n).toLocaleString('fr-FR') + ' €'; }
+  function fmtEdit(n){
+    var s = round2(n).toFixed(2).replace(/\.?0+$/,'');
+    return s.replace('.', ',');
+  }
+  function pct1(n){ return (Math.round(n*10)/10).toLocaleString('fr-FR',{minimumFractionDigits:0, maximumFractionDigits:1}); }
+  function per(){ return state.periode === 'mois' ? 12 : 1; }
+
+  function netAvantImpot(brut){ return brut * (1 - state.taux); }
+  function netImposable(brut){ return brut * (1 - state.taux) + CSG_NON_DED * brut; }
+  function revenuImposable(brut){
+    var ni = netImposable(brut);
+    var ab = Math.min(Math.max(ni * ABATT_RATE, ABATT_MIN), ABATT_MAX);
+    return Math.max(0, ni - ab);
+  }
+  function baremePart(rpp){
+    var impot = 0, prev = 0;
+    for (var i=0;i<BRACKETS.length;i++){
+      var b = BRACKETS[i];
+      if (rpp > b.limit){ impot += (b.limit - prev)*b.rate; prev = b.limit; }
+      else { impot += (rpp - prev)*b.rate; return impot; }
+    }
+    return impot;
+  }
+  function tmi(brut){
+    var rpp = revenuImposable(brut) / state.parts;
+    for (var i=0;i<BRACKETS.length;i++){ if (rpp <= BRACKETS[i].limit) return BRACKETS[i].rate; }
+    return BRACKETS[BRACKETS.length-1].rate;
+  }
+  function impot(brut){
+    var rpp = revenuImposable(brut) / state.parts;
+    var imp = baremePart(rpp) * state.parts;
+    var d = DECOTE[state.situation];
+    if (imp > 0 && imp < d.seuil){
+      var dec = Math.max(0, d.forfait - d.taux * imp);
+      imp = Math.max(0, imp - dec);
+    }
+    return imp;
+  }
+  function netApresImpot(brut){ return netAvantImpot(brut) - impot(brut); }
+
+  function brutFromNetApres(target){
+    if (target <= 0) return 0;
+    var lo = 0, hi = target / (1 - state.taux) * 1.6 + 1000, g = 0;
+    while (netApresImpot(hi) < target && g++ < 200) hi *= 1.5;
+    for (var i=0;i<80;i++){
+      var mid = (lo+hi)/2;
+      if (netApresImpot(mid) < target) lo = mid; else hi = mid;
+    }
+    return (lo+hi)/2;
+  }
+  function brutFromNet(net){ return net / (1 - state.taux); }
+
+  function currentValue(field){
+    var b = state.brutAnnuel, p = per();
+    if (field === 'brut')  return b / p;
+    if (field === 'net')   return netAvantImpot(b) / p;
+    return netApresImpot(b) / p;
+  }
+
+  var inputs = { brut: $('in-brut'), net: $('in-net'), apres: $('in-apres') };
+  var tiers  = { brut: $('tier-brut'), net: $('tier-net'), apres: $('tier-apres') };
+
+  function render(skip){
+    var b = state.brutAnnuel, p = per();
+    var netA = netAvantImpot(b);
+    var impA = impot(b);
+    var apresA = netA - impA;
+    var cotA = b * state.taux;
+
+    if (skip !== 'brut')  inputs.brut.value  = fmt(b / p);
+    if (skip !== 'net')   inputs.net.value   = fmt(netA / p);
+    if (skip !== 'apres') inputs.apres.value = fmt(apresA / p);
+
+    $('cot-rate').textContent = '(' + pct1(state.taux*100) + ' %)';
+    $('cot-amount').textContent = fmtEuro(cotA / p);
+    $('imp-amount').textContent = fmtEuro(impA / p);
+
+    $('s-impot').textContent = fmtEuro0(impA);
+    var ri = revenuImposable(b);
+    var tauxMoyen = ri > 0 ? (impA / ri) * 100 : 0;
+    $('s-taux').textContent = pct1(tauxMoyen) + ' %';
+    $('s-tmi').textContent = Math.round(tmi(b)*100) + ' %';
+
+    var perTxt = state.periode === 'mois' ? '/ mois' : '/ an';
+    var pers = document.querySelectorAll('.per');
+    for (var i=0;i<pers.length;i++) pers[i].textContent = perTxt;
+  }
+
+  function wireField(field){
+    var el = inputs[field], tier = tiers[field];
+    el.addEventListener('focus', function(){
+      active = field;
+      tier.classList.add('focused');
+      el.value = fmtEdit(currentValue(field));
+      el.select();
+    });
+    el.addEventListener('input', function(){
+      var val = parseNum(el.value) * per();
+      if (field === 'brut')      state.brutAnnuel = val;
+      else if (field === 'net')  state.brutAnnuel = brutFromNet(val);
+      else                       state.brutAnnuel = brutFromNetApres(val);
+      render(field);
+    });
+    el.addEventListener('blur', function(){
+      active = null;
+      tier.classList.remove('focused');
+      render();
+    });
+  }
+  wireField('brut'); wireField('net'); wireField('apres');
+
+  var perBtns = document.querySelectorAll('.toggle button');
+  for (var i=0;i<perBtns.length;i++){
+    perBtns[i].addEventListener('click', function(){
+      state.periode = this.getAttribute('data-periode');
+      for (var j=0;j<perBtns.length;j++){
+        var on = perBtns[j] === this;
+        perBtns[j].classList.toggle('active', on);
+        perBtns[j].setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+      render();
+    });
+  }
+
+  var tauxInput = $('taux');
+  var chips = document.querySelectorAll('.chips button');
+  function syncChips(){
+    for (var j=0;j<chips.length;j++){
+      var v = parseNum(chips[j].getAttribute('data-taux')) / 100;
+      chips[j].classList.toggle('active', Math.abs(v - state.taux) < 1e-9);
+    }
+  }
+  tauxInput.addEventListener('input', function(){
+    var v = parseNum(tauxInput.value) / 100;
+    state.taux = Math.min(Math.max(v, 0), 0.90);
+    syncChips(); render();
+  });
+  for (var c=0;c<chips.length;c++){
+    chips[c].addEventListener('click', function(){
+      tauxInput.value = this.getAttribute('data-taux');
+      state.taux = parseNum(this.getAttribute('data-taux')) / 100;
+      syncChips(); render();
+    });
+  }
+
+  var sitBtns = document.querySelectorAll('#seg-situation button');
+  for (var s=0;s<sitBtns.length;s++){
+    sitBtns[s].addEventListener('click', function(){
+      state.situation = this.getAttribute('data-sit');
+      for (var j=0;j<sitBtns.length;j++) sitBtns[j].classList.toggle('active', sitBtns[j] === this);
+      render();
+    });
+  }
+
+  function updateParts(){ $('parts-val').textContent = String(state.parts).replace('.', ','); }
+  $('parts-minus').addEventListener('click', function(){
+    state.parts = Math.max(1, Math.round((state.parts - 0.5)*2)/2);
+    updateParts(); render();
+  });
+  $('parts-plus').addEventListener('click', function(){
+    state.parts = Math.min(10, Math.round((state.parts + 0.5)*2)/2);
+    updateParts(); render();
+  });
+
+  syncChips(); updateParts(); render();
+})();
+</script>
